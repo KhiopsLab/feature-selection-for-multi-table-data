@@ -14,7 +14,7 @@ This system initially focused on creating a measure of the importance of variabl
 
 A *multi-table star schema* is a structure where information is organised in several data tables : a main table containing at least an identifier and a target, and one or more secondary tables. The target is the category to which the individual belongs.
 
-<img src="fig_MT.jpg" width="300px"><br>
+<img src="./figure/fig_MT.jpg" width="300px"><br>
 
 **Supervised classification and AUC**
 
@@ -37,10 +37,10 @@ pip install git+https://github.com/KhiopsLab/feature-selection-for-multi-table-d
 
 ## General approach
 
-<img src="fig_MT_flattening.jpg" width="700px"><br>
+<img src="./figure/fig_MT_flattening.jpg" width="700px"><br>
 Flattening variables in secondary tables leads to the creation of a large number of aggregates.
 
-<img src="fig_MT_flattening_with_selection.jpg" width="700px"><br>
+<img src="./figure/fig_MT_flattening_with_selection.jpg" width="700px"><br>
 Selecting variables before creating aggregates reduces search space and could improve the classifier.
 
 The importance measurement method used is a univariate one: each variable is evaluated independently of the others. For each variable, aggregates are constructed using only that variable. The importance used is the maximum level of all aggregates, provided by Khiops.
@@ -63,17 +63,17 @@ For further information, see the following article : [Sélection of secondary fe
 
 We consider the *Accidents* dataset with 2 secondary tables, *Users* and *Vehicles* directly linked to the main table.
 
-<img src="fig_accidents.jpg" width="400px"><br>
+<img src="./figure/fig_accidents.jpg" width="400px"><br>
 
 We have added numerical and categorical noise variables to each of the 2 tables. Applying Count discretization, the *Users* table is discretized into 3 intervals (1 user, 2 users, 3 or more users) and the *Vehicles* table into 2 intervals (1 vehicle, 2 or more vehicles).
 
 For the *Users* table, the information contained in the noise variables (N_5 to C_9) is strongly attenuated thanks to discretization.
 
-<img src="fig_Users.jpg" width="500px"><br>
+<img src="./figure/fig_Users.jpg" width="500px"><br>
 
 For the *Vehicles* table, the information contained in the noise variables (N_10 to C_14) is cancelled out by discretization.
 
-<img src="fig_Vehicles.jpg" width="500px"><br>
+<img src="./figure/fig_Vehicles.jpg" width="500px"><br>
 
 
 ## FS4MT Foundation
