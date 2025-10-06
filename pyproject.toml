@@ -1,0 +1,21 @@
+[project]
+name = "fs4mt"
+version = "0.1.0"
+description = "Feature selection for multi-table dataset"
+authors = [
+    { name = "Anais Collin", email = "anais.collin@orange.com" },
+	{ name = "Nicolas Voisine", email = "nicolas.voisine@orange.com" }
+]
+dependencies = [
+    "khiops>=10",
+    "tqdm",
+    "tabulate"
+]
+
+[build-system]
+requires = ["setuptools>=42"]
+build-backend = "setuptools.build_meta"
+
+
+[tool.setuptools]
+packages = ["fs4mt"]
