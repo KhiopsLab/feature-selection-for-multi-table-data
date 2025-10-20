@@ -134,17 +134,9 @@ def get_dataset(dataset_name):
             main_dictionary_name + "`Users": user_table_path,
         }
         target = "Gravity"
-        return (
-            data_path,
-            dictionary_file_path,
-            data_table_path,
-            [vehicle_table_path, user_table_path, place_table_path],
-            Additional_data_tables,
-            main_dictionary_name,
-            target,
-        )
+        secondary_table_list = [vehicle_table_path, user_table_path, place_table_path]
 
-    if dataset_name == "Accident_star_TableSelection":
+    elif dataset_name == "Accident_star_TableSelection":
         # Set accident data information
         data_path = os.path.join("DATA", "Accident")
         dictionary_file_path = os.path.join(
@@ -161,17 +153,9 @@ def get_dataset(dataset_name):
             main_dictionary_name + "`Users": user_table_path,
         }
         target = "Gravity"
-        return (
-            data_path,
-            dictionary_file_path,
-            data_table_path,
-            [vehicle_table_path, user_table_path, place_table_path],
-            Additional_data_tables,
-            main_dictionary_name,
-            target,
-        )
+        secondary_table_list = [vehicle_table_path, user_table_path, place_table_path]
 
-    if dataset_name == "Accident_flocon":
+    elif dataset_name == "Accident_flocon":
         # Set accident data information
         data_path = os.path.join("DATA", "Accidents")
         dictionary_file_path = os.path.join(data_path, "Accidents.kdic")
@@ -186,17 +170,9 @@ def get_dataset(dataset_name):
             main_dictionary_name + "`Vehicles`Users": user_table_path,
         }
         target = "Gravity"
-        return (
-            data_path,
-            dictionary_file_path,
-            data_table_path,
-            [vehicle_table_path, user_table_path, place_table_path],
-            Additional_data_tables,
-            main_dictionary_name,
-            target,
-        )
+        secondary_table_list = [vehicle_table_path, user_table_path, place_table_path]
 
-    if dataset_name == "Accident_flocon_inversion_user_vehicle":
+    elif dataset_name == "Accident_flocon_inversion_user_vehicle":
         # Set accident data information
         data_path = os.path.join("DATA", "Accident")
         dictionary_file_path = os.path.join(data_path, "Accidents_flocon.kdic")
@@ -211,17 +187,9 @@ def get_dataset(dataset_name):
             main_dictionary_name + "`Users": user_table_path,
         }
         target = "Gravity"
-        return (
-            data_path,
-            dictionary_file_path,
-            data_table_path,
-            [vehicle_table_path, user_table_path, place_table_path],
-            Additional_data_tables,
-            main_dictionary_name,
-            target,
-        )
+        secondary_table_list = [vehicle_table_path, user_table_path, place_table_path]
 
-    if dataset_name == "synth1":
+    elif dataset_name == "synth1":
         # Set data information
         data_path = os.path.join("DATA", "synth1")
         dictionary_file_path = os.path.join(data_path, "sample2_synthetic_dm_ids.kdic")
@@ -235,15 +203,35 @@ def get_dataset(dataset_name):
             main_dictionary_name + "`LOGS": logs_table_path,
         }
         target = "TARGET"
-        return (
-            data_path,
-            dictionary_file_path,
-            data_table_path,
-            [datamart_path, logs_table_path],
-            Additional_data_tables,
-            main_dictionary_name,
-            target,
+        secondary_table_list = [datamart_path, logs_table_path]
+
+    else:
+        print(
+            f'Error : The dataset "{dataset_name}" is not predefined, please specify the file names.'
         )
+        exit()
+
+    for dataset_file in [dictionary_file_path, data_table_path]:
+        check_dataset(dataset_file)
+    for dataset_file in secondary_table_list:
+        check_dataset(dataset_file)
+
+    print(f'The dataset "{dataset_name}" has been loaded successfully.')
+
+    return (
+        data_path,
+        dictionary_file_path,
+        data_table_path,
+        secondary_table_list,
+        Additional_data_tables,
+        main_dictionary_name,
+        target,
+    )
+
+def check_dataset(file_path):
+    if not os.path.isfile(file_path):
+        print(f"{file_path} does not exist.")
+        exit()
 
 
 class UnivariateMultitableAnalysis:
@@ -261,7 +249,7 @@ class UnivariateMultitableAnalysis:
     :type additional_data_tables: dict
     :param target_variable: Name of the target variable.
     :type target_variable: str
-    :param exploration_type: Parameter to be analyze, 'All' for both variable and primitive, 'Variable' or 'Primitive for only variable or primitive,  defaults to 'Variable'.
+    :param exploration_type: Parameter to be analyze, 'All' for both variable and primitive, 'Variable' or 'Primitive' for only variable or primitive, defaults to 'Variable'.
     :type exploration_type: str
     :param count_effect_reduction: State of discretization, True is used, defaults to True.
     :type count_effect_reduction: bool
@@ -1118,11 +1106,13 @@ class UnivariateMultitableAnalysis:
         self.match_dictionary_name_variable_name()
         # Initialise dictionary domain -> all variable to unused
         self.initialize_variable_state()
-
+        
         (
             variable_importance_dictionary,
             primitive_importance,
         ) = self.univariate_analysis()
+
+        print(f'\nKhiops reports are written in "{self.result_directory}" directory')
 
         if self.exploration_type == "Variable" or self.exploration_type == "All":
             variable_exploration_file_name = "variable_exploration.json"
@@ -1131,6 +1121,7 @@ class UnivariateMultitableAnalysis:
             )
             with open(variable_exploration_file, "w") as f:
                 json.dump(variable_importance_dictionary, f, indent=2)
+            print(f'\nVariables exploration report in json format is written in "{self.output_dir}" directory')
 
         if self.exploration_type == "Primitive" or self.exploration_type == "All":
             primitive_exploration_file_name = "primitive_exploration.json"
@@ -1139,8 +1130,10 @@ class UnivariateMultitableAnalysis:
             )
             with open(primitive_exploration_file, "w") as f:
                 json.dump(primitive_importance, f, indent=2)
-
+            print(f'\nPrimitives exploration report in json format is written in "{self.output_dir}" directory')
+        print("\n")
         if self.exploration_type == "All":
+            print("")
             return variable_importance_dictionary, primitive_importance
         elif self.exploration_type == "Variable":
             return variable_importance_dictionary

@@ -9,12 +9,27 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "")))
 
 
 class VariableSelectionStatistics:
-    """ """
+    """Estimates the importance of secondary native variables in multi-table
+    data on the target variable using a univariate approach with or without
+    discretization.
+
+    :param dictionary_file_path: Path of a Khiops dictionary file.
+    :type dictionary_file_path: str
+    :param exploration_type: Parameter to be analyze, 'All' for both variable and primitive, 'Variable' or 'Primitive' for only variable or primitive, defaults to 'Variable'.
+    :type exploration_type: str
+    :param count_effect_reduction: State of discretization, True is used, defaults to True.
+    :type count_effect_reduction: bool
+    :param output_dir: Path of the output directory, defaults to "".
+    :type output_dir: str, optional
+    :param variable_exploration_name: Name of the JSON file generated during multi-table analysis of variables, defaults to "variable_exploration.json".
+    :type variable_exploration_name: str   
+    :param primitive_exploration_name: Name of the JSON file generated during multi-table analysis of primitives, defaults to "primitive_exploration.json".
+    :type primitive_exploration_name: str   
+    """
 
     def __init__(
         self,
         dictionary_file_path,
-        dictionary_name,
         exploration_type="Variable",
         count_effect_reduction=True,
         output_dir="",
@@ -25,7 +40,6 @@ class VariableSelectionStatistics:
         Initialize class
         """
         self.dictionary_file_path = dictionary_file_path
-        self.dictionary_name = dictionary_name
         self.exploration_type = exploration_type
         self.discretization = count_effect_reduction  # State of discretization option
         self.output_dir = output_dir  # Output directory path
@@ -150,6 +164,7 @@ class VariableSelectionStatistics:
 
         exploration_file.write(80 * "=" + " END " + 80 * "=" + "\n")
         exploration_file.close()
+        print("Report file written : " + os.path.join(self.output_dir, exploration_file_name))
 
     def read_data(self, variable_exploration_name, primitive_exploration_name):
         """
@@ -160,26 +175,31 @@ class VariableSelectionStatistics:
         primitive_importance = []
 
         # reading files if existing
-        variable_exploration_file_name = variable_exploration_name
-        variable_exploration_file = os.path.join(
-            self.output_dir, variable_exploration_file_name
-        )
+        # reading variables report
+        if self.exploration_type == "All" or self.exploration_type == "Variable":
+            variable_exploration_file_name = variable_exploration_name
+            variable_exploration_file = os.path.join(
+                self.output_dir, variable_exploration_file_name
+            )
 
-        if os.path.exists(variable_exploration_file):
-            with open(variable_exploration_file, "r") as f:
-                variable_importance_dictionary = json.load(f)
-        else:
-            print("file " + '"' + variable_exploration_file + '"' + " doesn't exist")
+            if os.path.exists(variable_exploration_file):
+                with open(variable_exploration_file, "r") as f:
+                    variable_importance_dictionary = json.load(f)
+            else:
+                print("file " + '"' + variable_exploration_file + '"' + " doesn't exist")
 
-        primitive_exploration_file_name = primitive_exploration_name
-        primitive_exploration_file = os.path.join(
-            self.output_dir, primitive_exploration_file_name
-        )
-        if os.path.exists(primitive_exploration_file):
-            with open(primitive_exploration_file, "r") as f:
-                primitive_importance = json.load(f)
-        else:
-            print("file " + '"' + primitive_exploration_file + '"' + " doesn't exist")
+        # reading primitives report
+        if self.exploration_type == "All" or self.exploration_type == "Primitive":
+            primitive_exploration_file_name = primitive_exploration_name
+            primitive_exploration_file = os.path.join(
+                self.output_dir, primitive_exploration_file_name
+            )
+
+            if os.path.exists(primitive_exploration_file):
+                with open(primitive_exploration_file, "r") as f:
+                    primitive_importance = json.load(f)
+            else:
+                print("file " + '"' + primitive_exploration_file + '"' + " doesn't exist")
 
         return variable_importance_dictionary, primitive_importance
 
@@ -239,7 +259,10 @@ class VariableSelectionStatistics:
         :return: list of variables
         :rtype: list
         """
-        return df_variable_exploration[self.variable].tolist()
+        list_variables = df_variable_exploration[self.variable].tolist()
+        print("List of variables analyzed :")
+        print(list_variables)
+        return list_variables
 
     def get_variable_number_zero_level(self, df_variable_exploration):
         """
@@ -250,16 +273,19 @@ class VariableSelectionStatistics:
         :return: number of variables with level zero
         :rtype: int
         """
+
         if self.discretization:
-            return len(
+            nb_zero = len(
                 df_variable_exploration[df_variable_exploration[self.col_level] == 0]
             )
         else:
-            return len(
+            nb_zero = len(
                 df_variable_exploration[
                     df_variable_exploration[self.col_level_no_discret] == 0
                 ]
             )
+        print("Number of variables with level zero : " + str(nb_zero))
+        return nb_zero       
 
     def filter_variables_in_dico_domain(
         self, df_variable_exploration, nb_var_to_filter=None
@@ -372,8 +398,11 @@ class VariableSelectionStatistics:
             )
 
         if variable_importance_dictionary != {} and primitive_importance != []:
+            print("Variables and primitive results loaded")
             return df_variable_exploration, df_primitive_exploration
         elif variable_importance_dictionary != {}:
+            print("Variables results loaded")
             return df_variable_exploration
         elif primitive_importance != []:
+            print("Primitive results loaded")
             return df_primitive_exploration

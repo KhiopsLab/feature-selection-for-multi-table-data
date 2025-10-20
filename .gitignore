@@ -1,0 +1,11 @@
+# Ignore le cache Python
+fs4mt/__pycache__/
+
+# Ignore les checkpoints Jupyter Notebook
+notebook/.ipynb_checkpoints/
+
+# Ignore les dossiers de sortie spécifiques
+output_khiops_discretization/
+output_khiops_variable_no_discretization/
+results_discretization/
+results_variable_no_discretization/
