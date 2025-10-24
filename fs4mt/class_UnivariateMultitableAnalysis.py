@@ -18,7 +18,7 @@ if version == "10":
 elif version == "11":
     kh_version = "v11"
 else:
-    print("Error : Version " + version + " of Khiops is not supported by this tool.")
+    print(f"Error : Version {version} of Khiops is not supported by this tool.")
     exit()
 
 # Dictionary to match TablePartiton with construction rule
@@ -207,7 +207,8 @@ def get_dataset(dataset_name):
 
     else:
         print(
-            f'Error : The dataset "{dataset_name}" is not predefined, please specify the file names.'
+            f"Error : The dataset '{dataset_name}' "
+            "is not predefined, please specify the file names."
         )
         exit()
 
@@ -227,6 +228,7 @@ def get_dataset(dataset_name):
         main_dictionary_name,
         target,
     )
+
 
 def check_dataset(file_path):
     if not os.path.isfile(file_path):
@@ -255,14 +257,14 @@ class UnivariateMultitableAnalysis:
     :type count_effect_reduction: bool
     :param max_trees: Maximum number of trees to construct, defaults to 0.
     :type max_trees: int, optional
-    :param max_constructed_variables_per_variable: Maximum number of variables to construct per native variable, defaults to 10.
+    :param max_constructed_variables_per_variable: Maximum number of variables to construct per native variable, specify 10 for faster computation, defaults to 50.
     :type max_constructed_variables_per_variable: int, optional
-    :param results_dir: Path of the results directory, defaults to "Results".
-    :type results_dir: str, optional
     :param construction_rules: Allowed rules for the automatic variable construction, defaults to kh.all_construction_rules.
     :type construction_rules: list, optional
-    :param output_dir: Path of the output directory, defaults to "".
-    :type output_dir: str, optional
+    :param output_khiops_dir: Path of the output khiops analysis directory, defaults to "output_khiops".
+    :type output_khiops_dir: str, optional
+    :param results_dir: Path of the results directory, defaults to "results".
+    :type results_dir: str, optional
     """
 
     def __init__(
@@ -275,10 +277,10 @@ class UnivariateMultitableAnalysis:
         exploration_type="Variable",
         count_effect_reduction=True,
         max_trees=0,
-        max_constructed_variables_per_variable=10,
+        max_constructed_variables_per_variable=50,
         construction_rules=kh.all_construction_rules,
-        results_dir="Results",
-        output_dir="",
+        output_khiops_dir="output_khiops",
+        results_dir="results",
     ):
         """
         Initialize class
@@ -298,13 +300,18 @@ class UnivariateMultitableAnalysis:
         # Training attributes
         self.number_aggregate = max_constructed_variables_per_variable  # Maximum number of variables to construct per native variable
         self.number_tree = max_trees  # Maximum number of trees to construct
-        self.result_directory = results_dir  # Results directory path
         self.construction_rules = (
             construction_rules  # List of construction rules to use
         )
-
-        self.output_dir = output_dir  # Output directory path
         self.discretisation = count_effect_reduction  # State of discretization option
+
+        #  Create results and output directories
+        if not os.path.exists(output_khiops_dir):
+            os.mkdir(output_khiops_dir)
+        self.output_khiops_dir = output_khiops_dir  # Results directory path
+        if not os.path.exists(results_dir):
+            os.mkdir(results_dir)
+        self.results_dir = results_dir  # Output directory path
 
         # Other
         if exploration_type not in ["Variable", "All", "Primitive"]:
@@ -314,8 +321,12 @@ class UnivariateMultitableAnalysis:
             exit()
         self.exploration_type = exploration_type  # Exploration type
         self.pattern = r"[ ,.;`()]"  # to split derivation rule and extract variables and/or primitives list
-        self.match_name_dictionary_variable_name = {}  # Dictionary to match dictionary name with its variable name
-        self.match_dictionary_parent_dictionary = {}  # Dictionary to match dictionary with its parent dictionary
+        self.match_table_name_dictionary_name = (
+            {}
+        )  # Dictionary to match table name with its dictionary name
+        self.match_dictionary_parent_dictionary = (
+            {}
+        )  # Dictionary to match dictionary with its parent dictionary
         self.analyse_count = 0  # Real number of constructed variable
         self.table_exploration_array = (
             pd.DataFrame(  # Pandas dataframe to save tables information
@@ -360,17 +371,22 @@ class UnivariateMultitableAnalysis:
         self.col_level_no_discret = "importance"
         self.col_agg_no_discret = "importance aggregate"
 
-    def match_dictionary_name_variable_name(self):
+    def match_dictionary_name(self):
         """
-        Match each secondary dictionary name with its corresponding variable name in the parent dictionary
-        and match each secondary dictionary name with its parent dictionary.
+        match_table_name_dictionary_name : Match each secondary table name
+            with its corresponding dictionary name
+            example : {'Place': 'Place', 'Vehicles': 'Vehicle', 'Users': 'User'}
+
+        match_dictionary_parent_dictionary : Match each secondary dictionary name
+            with its corresponding parent dictionary name
+            example : {'Place': 'Accident', 'Accident': 'User', 'User': 'Vehicle'}
         """
         for dictionary in self.dictionary_domain.dictionaries:
             for variable in dictionary.variables:
                 if (
                     variable.type == "Table" or variable.type == "Entity"
                 ) and variable.used:
-                    self.match_name_dictionary_variable_name[variable.name] = (
+                    self.match_table_name_dictionary_name[variable.name] = (
                         variable.object_type
                     )
                     self.match_dictionary_parent_dictionary[variable.object_type] = (
@@ -389,7 +405,7 @@ class UnivariateMultitableAnalysis:
                 self.dictionary_name,
                 self.root_table_path,
                 self.target,
-                self.result_directory,
+                self.output_khiops_dir,
                 additional_data_tables=self.additional_table,
                 informative_variables_only=False,
                 max_constructed_variables=100,
@@ -402,7 +418,7 @@ class UnivariateMultitableAnalysis:
                 self.dictionary_name,
                 self.root_table_path,
                 self.target,
-                os.path.join(self.result_directory, "AnalysisResults.khj"),
+                os.path.join(self.output_khiops_dir, "AnalysisResults.khj"),
                 additional_data_tables=self.additional_table,
                 informative_variables_only=False,
                 max_constructed_variables=100,
@@ -626,7 +642,7 @@ class UnivariateMultitableAnalysis:
         ).used = True
         # Save dictionary if necessary
         self.dictionary_domain.export_khiops_dictionary_file(
-            os.path.join(self.result_directory, "dico_" + prefix + ".kdic")
+            os.path.join(self.output_khiops_dir, "dico_" + prefix + ".kdic")
         )
 
         # Create variables (aggregates)
@@ -636,7 +652,7 @@ class UnivariateMultitableAnalysis:
                 self.dictionary_name,
                 self.root_table_path,
                 self.target,
-                self.result_directory,
+                self.output_khiops_dir,
                 additional_data_tables=self.additional_table,
                 results_prefix=prefix,
                 max_constructed_variables=self.number_aggregate,
@@ -644,8 +660,6 @@ class UnivariateMultitableAnalysis:
                 construction_rules=self.construction_rules,
                 selection_variable=selection_variable,
                 selection_value=selection_value,
-                keep_initial_categorical_variables=True,
-                keep_initial_numerical_variables=True,
                 informative_variables_only=False,
             )
         elif kh_version == "v11":
@@ -654,15 +668,13 @@ class UnivariateMultitableAnalysis:
                 self.dictionary_name,
                 self.root_table_path,
                 self.target,
-                os.path.join(self.result_directory, prefix + "AnalysisResults.khj"),
+                os.path.join(self.output_khiops_dir, prefix + "AnalysisResults.khj"),
                 additional_data_tables=self.additional_table,
                 max_constructed_variables=self.number_aggregate,
                 max_trees=self.number_tree,
                 construction_rules=self.construction_rules,
                 selection_variable=selection_variable,
                 selection_value=selection_value,
-                keep_initial_categorical_variables=True,
-                keep_initial_numerical_variables=True,
                 informative_variables_only=False,
             )
         # Update importance measure -> importance measure is the maximum Khiops level in the aggregate set.
@@ -808,9 +820,9 @@ class UnivariateMultitableAnalysis:
     ):
         variable_importance_dictionary[key_table][key_var][self.col_type] = var_type
         if self.discretisation:
-            variable_importance_dictionary[key_table][key_var][self.col_level] = (
-                var_level
-            )
+            variable_importance_dictionary[key_table][key_var][
+                self.col_level
+            ] = var_level
             variable_importance_dictionary[key_table][key_var][self.col_agg] = var_agg
         else:
             variable_importance_dictionary[key_table][key_var][
@@ -873,7 +885,7 @@ class UnivariateMultitableAnalysis:
             for (
                 table_name,
                 dictionary_name,
-            ) in self.match_name_dictionary_variable_name.items():
+            ) in self.match_table_name_dictionary_name.items():
                 number = 1
                 for dictionary in self.dictionary_domain.dictionaries:
                     if dictionary_name == dictionary.name:
@@ -896,7 +908,7 @@ class UnivariateMultitableAnalysis:
                                     number
                                 )
                                 origine_table_name = get_key(
-                                    self.match_name_dictionary_variable_name, origine
+                                    self.match_table_name_dictionary_name, origine
                                 )
                                 parent_table = origine_table_name
                                 list_table_name.append(parent_table)
@@ -913,12 +925,12 @@ class UnivariateMultitableAnalysis:
             # variable_to_add = self.get_grouping_variable(match_datatable_table_number_in_schema)
             # print(variable_to_add)
 
-        # Analyse by table in match_name_dictionary_variable_name
+        # Analysis by table in match_table_name_dictionary_name
         # With selection :
-        #   match_name_dictionary_variable_name =
+        #   match_table_name_dictionary_name =
         #       {'Place': 'Place', 'Vehicles': 'Vehicle', 'UsersSelection': 'User'}
         # Snowflake schema :
-        #   match_name_dictionary_variable_name =
+        #   match_table_name_dictionary_name =
         #       {'Place': 'Place', 'Vehicles': 'Vehicle', 'Users': 'User'}
         #   match_dictionary_parent_dictionary =
         #       {'Place': 'Accident', 'Accident': 'User', 'User': 'Vehicle'}
@@ -930,8 +942,8 @@ class UnivariateMultitableAnalysis:
         for (
             table_name,
             dictionary_name,
-        ) in self.match_name_dictionary_variable_name.items():
-            print("table : " + table_name)
+        ) in self.match_table_name_dictionary_name.items():
+            print(f"table : {table_name}")
             for dictionary in self.dictionary_domain.dictionaries:
                 if dictionary_name == dictionary.name:
                     if not dictionary.root:
@@ -948,7 +960,7 @@ class UnivariateMultitableAnalysis:
                             origine = parent
                             parent = self.match_dictionary_parent_dictionary[origine]
                             origine_table_name = get_key(
-                                self.match_name_dictionary_variable_name, origine
+                                self.match_table_name_dictionary_name, origine
                             )
                             self.dictionary_domain.get_dictionary(parent).get_variable(
                                 origine_table_name
@@ -1068,7 +1080,7 @@ class UnivariateMultitableAnalysis:
                             origine = parent
                             parent = self.match_dictionary_parent_dictionary[origine]
                             origine_table_name = get_key(
-                                self.match_name_dictionary_variable_name, origine
+                                self.match_table_name_dictionary_name, origine
                             )
                             self.dictionary_domain.get_dictionary(parent).get_variable(
                                 origine_table_name
@@ -1102,35 +1114,41 @@ class UnivariateMultitableAnalysis:
 
     def variables_analysis(self):
         """Global function to estimate variable's importance"""
-        # Get matching dictionary for variable table name and table name
-        self.match_dictionary_name_variable_name()
+        # Get matching dictionary for table name and dictionary name
+        self.match_dictionary_name()
         # Initialise dictionary domain -> all variable to unused
         self.initialize_variable_state()
-        
+
         (
             variable_importance_dictionary,
             primitive_importance,
         ) = self.univariate_analysis()
 
-        print(f'\nKhiops reports are written in "{self.result_directory}" directory')
+        print(f'\nKhiops reports saved in "{self.output_khiops_dir}" directory')
 
         if self.exploration_type == "Variable" or self.exploration_type == "All":
             variable_exploration_file_name = "variable_exploration.json"
             variable_exploration_file = os.path.join(
-                self.output_dir, variable_exploration_file_name
+                self.results_dir, variable_exploration_file_name
             )
             with open(variable_exploration_file, "w") as f:
                 json.dump(variable_importance_dictionary, f, indent=2)
-            print(f'\nVariables exploration report in json format is written in "{self.output_dir}" directory')
+            print(
+                "\nVariables exploration report in json format saved : "
+                f"{variable_exploration_file}"
+            )
 
         if self.exploration_type == "Primitive" or self.exploration_type == "All":
             primitive_exploration_file_name = "primitive_exploration.json"
             primitive_exploration_file = os.path.join(
-                self.output_dir, primitive_exploration_file_name
+                self.results_dir, primitive_exploration_file_name
             )
             with open(primitive_exploration_file, "w") as f:
                 json.dump(primitive_importance, f, indent=2)
-            print(f'\nPrimitives exploration report in json format is written in "{self.output_dir}" directory')
+            print(
+                "\nPrimitives exploration report in json format saved : "
+                f"{primitive_exploration_file}"
+            )
         print("\n")
         if self.exploration_type == "All":
             print("")

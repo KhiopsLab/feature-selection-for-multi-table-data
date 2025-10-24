@@ -3,6 +3,7 @@ import pandas as pd
 import sys
 import json
 from khiops import core as kh
+from class_UnivariateMultitableAnalysis import UnivariateMultitableAnalysis
 
 # Add the path to the parent folder
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "")))
@@ -19,12 +20,12 @@ class VariableSelectionStatistics:
     :type exploration_type: str
     :param count_effect_reduction: State of discretization, True is used, defaults to True.
     :type count_effect_reduction: bool
-    :param output_dir: Path of the output directory, defaults to "".
-    :type output_dir: str, optional
+    :param results_dir: Path of the results directory, defaults to "results".
+    :type results_dir: str, optional
     :param variable_exploration_name: Name of the JSON file generated during multi-table analysis of variables, defaults to "variable_exploration.json".
-    :type variable_exploration_name: str   
+    :type variable_exploration_name: str
     :param primitive_exploration_name: Name of the JSON file generated during multi-table analysis of primitives, defaults to "primitive_exploration.json".
-    :type primitive_exploration_name: str   
+    :type primitive_exploration_name: str
     """
 
     def __init__(
@@ -32,7 +33,7 @@ class VariableSelectionStatistics:
         dictionary_file_path,
         exploration_type="Variable",
         count_effect_reduction=True,
-        output_dir="",
+        results_dir="",
         variable_exploration_name="variable_exploration.json",
         primitive_exploration_name="primitive_exploration.json",
     ):
@@ -42,13 +43,33 @@ class VariableSelectionStatistics:
         self.dictionary_file_path = dictionary_file_path
         self.exploration_type = exploration_type
         self.discretization = count_effect_reduction  # State of discretization option
-        self.output_dir = output_dir  # Output directory path
+        self.results_dir = results_dir  # Results directory path
         self.variable_exploration_name = variable_exploration_name
         self.primitive_exploration_name = primitive_exploration_name
-        self.init_variables()
 
-    def init_variables(self):
-        # variables names for variables and primitives exploration
+        # columns names for variables and primitives exploration
+        self.init_columns()
+
+        # create an instance of the UnivariateMultitableAnalysis class
+        self.analysis = UnivariateMultitableAnalysis(
+            dictionary_file_path=dictionary_file_path,
+            dictionary_name="",
+            data_table_path="",
+            additional_data_tables="",
+            target_variable="",
+            output_khiops_dir=results_dir,
+            results_dir=results_dir,
+        )
+
+        # initialize match_dictionary_name by calling the method
+        self.analysis.match_dictionary_name()
+        # access the dictionary match_table_name_dictionary_name
+        self.match_table_name_dictionary_name = (
+            self.analysis.match_table_name_dictionary_name
+        )
+
+    def init_columns(self):
+        # columns names for variables and primitives exploration
         self.table = "table"
         self.variable = "variable"
         self.col_type = "type"
@@ -107,64 +128,54 @@ class VariableSelectionStatistics:
 
         return df_variable_exploration
 
-    def write_txt_report(
+    def write_to_markdown_report(
         self,
         df_variable_exploration="",
         df_primitive_exploration="",
     ):
         """Create a text file with univariate analysis results"""
-        if self.exploration_type == "All":
-            exploration_file_name = "variable_and_primitive"
-        elif self.exploration_type == "Variable":
-            exploration_file_name = "variable"
-        elif self.exploration_type == "Primitive":
-            exploration_file_name = "primitive"
-        exploration_file_name += "_exploration.txt"
-        exploration_file = open(
-            os.path.join(self.output_dir, exploration_file_name), "w"
-        )
-        """
-        exploration_file.write(100 * "=" + "\n")
-        exploration_file.write(
-            "Variable and/or primitive exploration information\n"
-        )
-        exploration_file.write(100 * "=" + "\n")
-        exploration_file.write(
-            f"Aggregates number per variable : \t {self.number_aggregate} \n"
-        )
-        exploration_file.write(
-            f"Real analyse aggregates number : \t {self.analyse_count} \n"
-        )
-        exploration_file.write(f"Discretization : \t {self.discretization} \n")
-        exploration_file.write(f"Exploration for : \t {self.exploration_type} \n")
-        exploration_file.write("\n")
-        exploration_file.write(100 * "=" + "\n")
-        exploration_file.write("Table exploration information\n")
-        exploration_file.write(100 * "=" + "\n")
-        exploration_file.write(self.table_exploration_array.to_markdown())
-        exploration_file.write("\n")
-        exploration_file.write("\n")
-        exploration_file.write("\n")
-        """
         if self.exploration_type == "All" or self.exploration_type == "Variable":
-            exploration_file.write(180 * "=" + "\n")
-            exploration_file.write("Importance measures for variables \n\n")
+            exploration_file_name = "variable_exploration_to_markdown.txt"
+            exploration_file = open(
+                os.path.join(self.results_dir, exploration_file_name), "w"
+            )
             exploration_file.write(df_variable_exploration.to_markdown() + "\n")
-            exploration_file.write(180 * "=" + "\n")
-            exploration_file.write("\n")
-            exploration_file.write("\n")
+            exploration_file.close()
+            print(
+                "Report file saved : "
+                + os.path.join(self.results_dir, exploration_file_name)
+            )
 
         if self.exploration_type == "All" or self.exploration_type == "Primitive":
-            exploration_file.write(39 * "=" + "\n")
-            exploration_file.write("Importance measures for primitives \n\n")
+            exploration_file_name = "primitive_exploration_to_markdown.txt"
+            exploration_file = open(
+                os.path.join(self.results_dir, exploration_file_name), "w"
+            )
             exploration_file.write(df_primitive_exploration.to_markdown() + "\n")
-            exploration_file.write(39 * "=" + "\n")
-            exploration_file.write("\n")
-            exploration_file.write("\n")
+            exploration_file.close()
+            print(
+                "Report file saved : "
+                + os.path.join(self.results_dir, exploration_file_name)
+            )
 
-        exploration_file.write(80 * "=" + " END " + 80 * "=" + "\n")
-        exploration_file.close()
-        print("Report file written : " + os.path.join(self.output_dir, exploration_file_name))
+    def write_to_csv_report(
+        self,
+        df_variable_exploration="",
+        df_primitive_exploration="",
+    ):
+        """Create a tabulate file with univariate analysis results"""
+
+        if self.exploration_type == "All" or self.exploration_type == "Variable":
+            exploration_file_name = "variable_exploration.txt"
+            exploration_file = os.path.join(self.results_dir, exploration_file_name)
+            df_variable_exploration.to_csv(exploration_file, sep="\t", index=False)
+            print(f"Report file saved : {exploration_file}")
+
+        if self.exploration_type == "All" or self.exploration_type == "Primitive":
+            exploration_file_name = "primitive_exploration.txt"
+            exploration_file = os.path.join(self.results_dir, exploration_file_name)
+            df_primitive_exploration.to_csv(exploration_file, sep="\t", index=False)
+            print(f"Report file saved : {exploration_file}")
 
     def read_data(self, variable_exploration_name, primitive_exploration_name):
         """
@@ -179,27 +190,31 @@ class VariableSelectionStatistics:
         if self.exploration_type == "All" or self.exploration_type == "Variable":
             variable_exploration_file_name = variable_exploration_name
             variable_exploration_file = os.path.join(
-                self.output_dir, variable_exploration_file_name
+                self.results_dir, variable_exploration_file_name
             )
 
             if os.path.exists(variable_exploration_file):
                 with open(variable_exploration_file, "r") as f:
                     variable_importance_dictionary = json.load(f)
             else:
-                print("file " + '"' + variable_exploration_file + '"' + " doesn't exist")
+                print(
+                    "file " + '"' + variable_exploration_file + '"' + " doesn't exist"
+                )
 
         # reading primitives report
         if self.exploration_type == "All" or self.exploration_type == "Primitive":
             primitive_exploration_file_name = primitive_exploration_name
             primitive_exploration_file = os.path.join(
-                self.output_dir, primitive_exploration_file_name
+                self.results_dir, primitive_exploration_file_name
             )
 
             if os.path.exists(primitive_exploration_file):
                 with open(primitive_exploration_file, "r") as f:
                     primitive_importance = json.load(f)
             else:
-                print("file " + '"' + primitive_exploration_file + '"' + " doesn't exist")
+                print(
+                    "file " + '"' + primitive_exploration_file + '"' + " doesn't exist"
+                )
 
         return variable_importance_dictionary, primitive_importance
 
@@ -215,6 +230,7 @@ class VariableSelectionStatistics:
 
         df_variable_exploration = self.init_df_variable_exploration(nb_columns)
         i = 0
+
         if self.discretization:
             for key1, value1 in variable_importance_dictionary.items():
                 for key2, value2 in variable_importance_dictionary[key1].items():
@@ -228,6 +244,12 @@ class VariableSelectionStatistics:
                         value2[self.col_importances_list],
                     ]
                     i += 1
+            # sort dataframe by levelMT, variable, table
+            df_variable_exploration = df_variable_exploration.sort_values(
+                by=[self.col_level, self.variable, self.table],
+                ascending=[False, True, True],
+            )
+
         else:
             for key1, value1 in variable_importance_dictionary.items():
                 for key2, value2 in variable_importance_dictionary[key1].items():
@@ -240,15 +262,44 @@ class VariableSelectionStatistics:
                         value2[self.col_nb_agg],
                     ]
                     i += 1
+            # sort dataframe by importance, variable, table
+            df_variable_exploration = df_variable_exploration.sort_values(
+                by=[self.col_level_no_discret, self.variable, self.table],
+                ascending=[False, True, True],
+            )
+
+        # add rank
+        df_variable_exploration.reset_index(drop=True, inplace=True)
+        df_variable_exploration["rank"] = df_variable_exploration.index + 1
+        # move column 'rank' to the front
+        df_variable_exploration = df_variable_exploration[
+            ["rank"] + [col for col in df_variable_exploration.columns if col != "rank"]
+        ]
+
         return df_variable_exploration
 
     def get_df_primitive_importance(self, primitive_importance):
         """
         convert list to pandas dataframe
         """
-        return pd.DataFrame(
+        df_primitive_exploration = pd.DataFrame(
             primitive_importance, columns=[self.col_primitive, self.col_level]
         )
+        # sort dataframe by levelMT, variable, table
+        df_primitive_exploration = df_primitive_exploration.sort_values(
+            by=[self.col_level, self.col_primitive],
+            ascending=[False, True],
+        )
+
+        # add rank
+        df_primitive_exploration.reset_index(drop=True, inplace=True)
+        df_primitive_exploration["rank"] = df_primitive_exploration.index + 1
+        # move column 'rank' to the front
+        df_primitive_exploration = df_primitive_exploration[
+            ["rank"]
+            + [col for col in df_primitive_exploration.columns if col != "rank"]
+        ]
+        return df_primitive_exploration
 
     def get_list_variable(self, df_variable_exploration):
         """
@@ -276,7 +327,9 @@ class VariableSelectionStatistics:
 
         if self.discretization:
             nb_zero = len(
-                df_variable_exploration[df_variable_exploration[self.col_level] == 0]
+                df_variable_exploration[
+                    df_variable_exploration[self.col_level] == 0
+                ]
             )
         else:
             nb_zero = len(
@@ -285,14 +338,14 @@ class VariableSelectionStatistics:
                 ]
             )
         print("Number of variables with level zero : " + str(nb_zero))
-        return nb_zero       
+        return nb_zero
 
-    def filter_variables_in_dico_domain(
+    def filter_variables_in_dictionary(
         self, df_variable_exploration, nb_var_to_filter=None
     ):
         """
         filter the nb_var_to_filter variables with low levelMT in dictionary
-        if nb_var_to_filter is None filter all variables with levelMT zero
+        if nb_var_to_filter is None then filter all variables with levelMT zero
 
         :param df_variable_exploration: univariate analysis results
         :type df_variable_exploration: pandas dataframe
@@ -315,51 +368,81 @@ class VariableSelectionStatistics:
             indice_level = col_list.index(self.col_level_no_discret)
 
         if nb_var_to_filter is None:
+            # filter all variables with level zero
+            print("\nFiltering all variables with level zero :")
             for row in df_variable_exploration.itertuples(index=False):
                 level = row[indice_level]
                 if level == 0:
                     var_to_unselect = row[indice_variable]
                     table = row[indice_table]
+                    dico_name = self.match_table_name_dictionary_name[table]
                     dictionary_domain_10_reduced = self.unselect_var(
-                        dictionary_domain_10_reduced, table, var_to_unselect
+                        dictionary_domain_10_reduced, dico_name, var_to_unselect
                     )
         else:
+            # filter the nb_var_to_filter variables with low level in dictionary
+            print(f"\nFiltering {nb_var_to_filter} variables with low level :")
             i = 0
-            for row in df_variable_exploration.itertuples(index=False):
+            # count zero level
+            nb_level0 = 0
+            # browse the lines starting from the end
+            for _, row in df_variable_exploration[::-1].iterrows():
                 level = row[indice_level]
+                # count zero level
+                if level == 0:
+                    nb_level0 += 1
                 if i < nb_var_to_filter:
                     i += 1
+                    # unselect the variable
                     var_to_unselect = row[indice_variable]
                     table = row[indice_table]
+                    dico_name = self.match_table_name_dictionary_name[table]
                     dictionary_domain_10_reduced = self.unselect_var(
-                        dictionary_domain_10_reduced, table, var_to_unselect
+                        dictionary_domain_10_reduced, dico_name, var_to_unselect
                     )
 
-        # dictionary writing
+            # display a warning if all variables with a level 0 haven't been set to Unused
+            if nb_var_to_filter < nb_level0:
+                print(
+                    "Warning : the number of variables specified for "
+                    f"filtering ({nb_var_to_filter}) is less than the number "
+                    f"of variables with a level 0 ({nb_level0}), "
+                    "the filtered variables are taken starting from the end "
+                    "(in alphabetical order)"
+                )
+
+        # writing dictionary
         if nb_var_to_filter is None:
-            str_nb = "level0"
+            str_nb = "level_0"
         else:
-            str_nb = "filter" + str(nb_var_to_filter)
+            str_nb = "filter_" + str(nb_var_to_filter)
         dictionary_file_path_reduced = os.path.join(
             mypath, "reduced_dictionary_" + str_nb + ".kdic"
         )
         dictionary_domain_10_reduced.export_khiops_dictionary_file(
             dictionary_file_path_reduced
         )
-        print("Writing dictionary : " + dictionary_file_path_reduced)
-        return dictionary_domain_10_reduced
+        print(f"Dictionary saved : {dictionary_file_path_reduced}")
+        # return dictionary_domain_10_reduced
 
-    def unselect_var(self, dictionary_domain, table, var_to_unselect):
+    def unselect_var(self, dictionary_domain, dico_name, var_to_unselect):
+        # search the variable and assign it to Unused
         flag = False
         for dico in dictionary_domain.dictionaries:
             if not dico.root:
-                if dico.name == table:
+                if dico.name == dico_name:
                     for var in dico.variables:
                         if var.name == var_to_unselect:
+                            flag = True
                             if not dico.is_key_variable(var):
                                 var.used = False
-                                flag = True
-                                break
+                            else:
+                                print(
+                                    f"The variable '{var_to_unselect}' "
+                                    f"in the table '{dico_name}' "
+                                    "is a key, it is not set to Unused"
+                                )
+                            break
         if not flag:
             print(
                 "Warning : the variable "
@@ -368,7 +451,7 @@ class VariableSelectionStatistics:
                 + '"'
                 + " in "
                 + '"'
-                + table
+                + dico_name
                 + '"'
                 + " dictionary doesn't exist in the dictionary"
             )
@@ -377,7 +460,7 @@ class VariableSelectionStatistics:
     def get_variables_analysis(self):
         """
         get variable importance and primitive importance json file
-        convert into dataframes
+        convert into dataframes and print
 
         :return: variables importances
         :rtype: dataframe
@@ -392,17 +475,18 @@ class VariableSelectionStatistics:
             df_variable_exploration = self.get_df_variable_importance(
                 variable_importance_dictionary
             )
+            print(df_variable_exploration)
+            print("Variables results loaded")
         if primitive_importance != []:
             df_primitive_exploration = self.get_df_primitive_importance(
                 primitive_importance
             )
+            print(df_primitive_exploration)
+            print("Primitive results loaded")
 
         if variable_importance_dictionary != {} and primitive_importance != []:
-            print("Variables and primitive results loaded")
             return df_variable_exploration, df_primitive_exploration
         elif variable_importance_dictionary != {}:
-            print("Variables results loaded")
             return df_variable_exploration
         elif primitive_importance != []:
-            print("Primitive results loaded")
             return df_primitive_exploration

@@ -1,6 +1,6 @@
 [project]
 name = "fs4mt"
-version = "0.1.0"
+version = "0.1.1"
 description = "Feature selection for multi-table dataset"
 authors = [
     { name = "Anais Collin", email = "anais.collin@orange.com" },

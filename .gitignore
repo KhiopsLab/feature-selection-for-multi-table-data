@@ -6,6 +6,6 @@ notebook/.ipynb_checkpoints/
 
 # Ignore les dossiers de sortie spécifiques
 output_khiops_discretization/
-output_khiops_variable_no_discretization/
+output_khiops/
 results_discretization/
-results_variable_no_discretization/
+results/
